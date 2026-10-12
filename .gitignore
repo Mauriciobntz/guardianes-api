@@ -1,0 +1,4 @@
+node_modules
+# Reportes guardados en modo local (sin DATABASE_URL)
+src/datos/storage/
+.env

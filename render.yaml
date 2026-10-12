@@ -1,0 +1,12 @@
+# Render Blueprint: New → Blueprint → elegir este repo. Pide DATABASE_URL (connection string de Neon).
+services:
+  - type: web
+    name: guardianes-api
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
