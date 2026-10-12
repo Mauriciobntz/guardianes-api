@@ -38,21 +38,21 @@ const LNG_MAX = 180
 
 /**
  * List every report.
- * @returns {import('./datos/seed.js').Reporte[]}
+ * @returns {Promise<import('./datos/seed.js').Reporte[]>}
  */
-export function getReportes(autorId) {
-  const reportes = reportesRepository.list()
+export async function getReportes(autorId) {
+  const reportes = await reportesRepository.list()
   return autorId ? reportes.filter(r => r.autorId === autorId) : reportes
 }
 
 /**
  * Get one report by id.
  * @param {string} id
- * @returns {import('./datos/seed.js').Reporte}
+ * @returns {Promise<import('./datos/seed.js').Reporte>}
  * @throws {NotFoundError}
  */
-export function getReporteById(id) {
-  const reporte = reportesRepository.findById(id)
+export async function getReporteById(id) {
+  const reporte = await reportesRepository.findById(id)
   if (!reporte) {
     throw new NotFoundError(`Reporte "${id}" not found`)
   }
@@ -62,10 +62,10 @@ export function getReporteById(id) {
 /**
  * Validate input and create a report.
  * @param {object} input
- * @returns {import('./datos/seed.js').Reporte}
+ * @returns {Promise<import('./datos/seed.js').Reporte>}
  * @throws {ValidationError}
  */
-export function createReporte(input = {}) {
+export async function createReporte(input = {}) {
   const { titulo, tipo, descripcion, lat, lng, categoriaResiduo, foto } = input ?? {}
 
   if (typeof titulo !== 'string' || titulo.trim() === '') {
@@ -98,7 +98,7 @@ export function createReporte(input = {}) {
 
   const reporte = {
     id: randomUUID(),
-    numero: Math.max(0, ...reportesRepository.list().map(r => Number(r.numero) || 0)) + 1,
+    numero: await reportesRepository.nextNumero(),
     titulo: titulo.trim(),
     tipo,
     descripcion: typeof descripcion === 'string' ? descripcion.trim() : '',

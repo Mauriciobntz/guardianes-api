@@ -24,17 +24,20 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' })
 })
 
-app.get('/api/reportes', (req, res) => {
-  res.json(getReportes(req.query.autorId))
-})
+// Express 4 does not catch rejected promises: pass them to the error handler below.
+const route = handler => (req, res, next) => handler(req, res).catch(next)
 
-app.get('/api/reportes/:id', (req, res) => {
-  res.json(getReporteById(req.params.id))
-})
+app.get('/api/reportes', route(async (req, res) => {
+  res.json(await getReportes(req.query.autorId))
+}))
 
-app.post('/api/reportes', (req, res) => {
-  res.status(201).json(createReporte(req.body))
-})
+app.get('/api/reportes/:id', route(async (req, res) => {
+  res.json(await getReporteById(req.params.id))
+}))
+
+app.post('/api/reportes', route(async (req, res) => {
+  res.status(201).json(await createReporte(req.body))
+}))
 
 // Unknown route fallback.
 app.use((req, res) => {

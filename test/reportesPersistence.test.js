@@ -12,11 +12,11 @@ test('reports and photos survive a new process, with demo-account filtering', ()
     cwd: new URL('.', import.meta.url), env: { ...process.env, REPORTES_FILE: file }, encoding: 'utf8',
   })
   try {
-    let result = run(`import { createReporte } from '../src/reportesService.js'; const r = createReporte({ titulo: 'Prueba persistencia', tipo: 'basura', descripcion: 'Detalle', lat: -28, lng: -57, foto: 'data:image/png;base64,aGVsbG8=' }); console.log(JSON.stringify(r))`)
+    let result = run(`import { createReporte } from '../src/reportesService.js'; const r = await createReporte({ titulo: 'Prueba persistencia', tipo: 'basura', descripcion: 'Detalle', lat: -28, lng: -57, foto: 'data:image/png;base64,aGVsbG8=' }); console.log(JSON.stringify(r))`)
     assert.equal(result.status, 0, result.stderr)
     const created = JSON.parse(result.stdout)
     assert.equal(created.autorId, 'sofia-demo')
-    result = run(`import { getReportes, getReporteById } from '../src/reportesService.js'; console.log(JSON.stringify({mine: getReportes('sofia-demo'), other: getReportes('another-user'), detail: getReporteById('${created.id}')}))`)
+    result = run(`import { getReportes, getReporteById } from '../src/reportesService.js'; console.log(JSON.stringify({mine: await getReportes('sofia-demo'), other: await getReportes('another-user'), detail: await getReporteById('${created.id}')}))`)
     assert.equal(result.status, 0, result.stderr)
     const loaded = JSON.parse(result.stdout)
     assert.deepEqual(loaded.mine, [created])

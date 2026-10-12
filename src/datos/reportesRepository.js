@@ -1,12 +1,11 @@
 /**
- * Persistence for the single-process prototype.
+ * Persistence for the prototype.
  *
- * - With DATABASE_URL (e.g. Neon on Render): reports live in PostgreSQL. The table is created
- *   and seeded automatically on first start.
- * - Without it (local dev): reports live in storage/reportes.json, as before.
+ * - With DATABASE_URL (e.g. Neon on Render): every call reads/writes PostgreSQL, so changes made
+ *   directly in the database show up right away. The table is created and seeded on first start.
+ * - Without it (local dev): reports live in storage/reportes.json.
  *
- * Either way the records are kept in memory too, so list/findById/create stay synchronous
- * and the logic layer does not change.
+ * All functions are async so both modes share the same interface.
  */
 import { mkdirSync, readFileSync, writeFileSync, renameSync } from 'node:fs'
 import { dirname } from 'node:path'
@@ -44,16 +43,12 @@ function loadFile() {
 
 // ---- PostgreSQL ----
 let pool
-async function loadDatabase() {
+async function connect() {
   const { default: pg } = await import('pg')
   pool = new pg.Pool({ connectionString: databaseUrl, max: 3 })
   await pool.query('CREATE TABLE IF NOT EXISTS reportes (id text PRIMARY KEY, data jsonb NOT NULL, creado timestamptz NOT NULL DEFAULT now())')
-  let { rows } = await pool.query('SELECT data FROM reportes ORDER BY creado, id')
-  if (!rows.length) {
-    await insert(normalize(seedReportes))
-    ;({ rows } = await pool.query('SELECT data FROM reportes ORDER BY creado, id'))
-  }
-  return normalize(rows.map(row => row.data))
+  const { rows } = await pool.query('SELECT count(*)::int AS n FROM reportes')
+  if (!rows[0].n) await insert(normalize(seedReportes))
 }
 function insert(records) {
   return pool.query(
@@ -61,18 +56,29 @@ function insert(records) {
     [JSON.stringify(records)],
   )
 }
-// Writes go one after the other, so they reach the database in the same order they were made.
-let writes = Promise.resolve()
 
-let reportes = databaseUrl ? await loadDatabase() : loadFile()
+let reportes = null
+if (databaseUrl) await connect()
+else reportes = loadFile()
 
-export function list() { return reportes.map(r => ({ ...r })) }
-export function findById(id) { const r = reportes.find(r => r.id === id); return r ? { ...r } : null }
-export function create(data) {
+export async function list() {
+  if (!pool) return reportes.map(r => ({ ...r }))
+  const { rows } = await pool.query('SELECT data FROM reportes ORDER BY creado, id')
+  return normalize(rows.map(row => row.data))
+}
+export async function findById(id) {
+  if (!pool) { const r = reportes.find(r => r.id === id); return r ? { ...r } : null }
+  const { rows } = await pool.query('SELECT data FROM reportes WHERE id = $1', [id])
+  return rows[0]?.data ?? null
+}
+export async function nextNumero() {
+  if (!pool) return Math.max(0, ...reportes.map(r => Number(r.numero) || 0)) + 1
+  const { rows } = await pool.query("SELECT coalesce(max((data->>'numero')::int), 0) + 1 AS n FROM reportes")
+  return rows[0].n
+}
+export async function create(data) {
   const record = { ...data }
-  const next = [...reportes, record]
-  if (pool) writes = writes.then(() => insert([record])).catch(error => console.error('No se pudo guardar el reporte en la base:', error))
-  else persist(next)
-  reportes = next
+  if (pool) await insert([record])
+  else { const next = [...reportes, record]; persist(next); reportes = next }
   return { ...record }
 }
