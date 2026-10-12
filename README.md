@@ -58,3 +58,10 @@ test/
   reportesPersistence.test.js
 render.yaml                   # configuración para Render
 ```
+
+## Créditos de las fotos de ejemplo
+
+Los reportes #038 y #042 cargados en la base usan fotos de Wikimedia Commons:
+
+- #038 — "Relevamiento para areas liberadas en Calle Charcas", Santiago Mazzarovich, CC BY-SA 4.0.
+- #042 — "Final de la calle Rafael Calzada", Darío Alpern, CC BY-SA 3.0 (recortada).
